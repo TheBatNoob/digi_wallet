@@ -1,37 +1,89 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.11;
+// SPDX-License-Identifier: GPL-3.0
 
-contract Wallet{
-   
-    address public owner;
-    uint256 private balance;
+pragma solidity >=0.8.2 <0.9.0;
 
-    // Constructor function
-    constructor() {
+contract MyWallet {
+
+    struct History {
+        address sender;
+        uint256 amount;
+        uint256 time;
+        string tx_type;
+    }
+    
+
+    // Mapping to store an array of History structs for each address
+    mapping(address => History[]) public transactionHistory;
+
+    // State variable
+
+    address private owner;
+
+    constructor () {
+
         owner = msg.sender;
-        balance = 0;
+
     }
 
-    // Function to receive funds
-    receive() external payable {
-         balance += msg.value;
+    function send_money(address to, uint256 amount) public {
+
+        require(msg.sender == owner, "You are not the wallet owner");
+
+        uint256 balance = address(this).balance;
+
+        require(amount <= balance, "Insufficient amount");
+
+        payable(to).transfer(amount);
+
+        //Recording Sender history
+        transactionHistory[owner].push(History(
+                owner, amount, block.timestamp, "Sent"
+        ));
+
+        //Recording in Receivers history
+        transactionHistory[to].push(History(
+                owner, amount, block.timestamp, "Received"
+        ));
+
     }
 
-    // Function to send funds to an external account
-    function send(address payable recipient, uint256 amount) public {
-        recipient.transfer(amount);
+    function receive_money() public payable {
+
+        require(msg.value > 0);
+
+        //Recording Receiving history
+        transactionHistory[msg.sender].push(History(
+                msg.sender, msg.value, block.timestamp, "Received"
+        ));
+
     }
 
-    // Function to withdraw funds to the owner's personal account
-    function withdraw(uint256 amount) public {
+    function withdraw( uint256 amount) public {
 
-        (bool callSuccess, ) = payable(msg.sender).call{value: amount}("");
-        require(callSuccess, "Call failed");
+        require(msg.sender == owner, "You are not the wallet owner");
+
+        uint256 balance = address(this).balance;
+
+        require(amount <= balance, "Insufficient amount");
+
+        payable(owner).transfer(amount);
+        
+        //Recording withdrawn history
+        transactionHistory[owner].push(History(
+                owner, amount, block.timestamp, "Withdrawn"
+        ));
+
     }
 
-    // Function to check the balance of the contract
+    //Function to return the transaction history for a specific address 
+     function getTransactionHistory(address _address) public view returns (History[] memory) {
+        return transactionHistory[_address];
+    }
+
     function getBalance() public view returns (uint256) {
-        return balance;
-    }
-}
 
+        return address(this).balance;
+
+    }   
+
+}
