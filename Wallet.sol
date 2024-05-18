@@ -10,7 +10,8 @@ contract MyWallet {
         uint256 time;
         string tx_type;
     }
-    
+
+//Code has no use for enum
 
     // Mapping to store an array of History structs for each address
     mapping(address => History[]) public transactionHistory;
